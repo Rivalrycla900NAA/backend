@@ -2,7 +2,7 @@
 ## Donation Platform - Background Check API
 
 📡 API Usage
-➡️ Endpoint: [/api/background-check](https://qj4tudodmb.execute-api.us-east-1.amazonaws.com/BackgroundCheckFunction)
+➡️ Endpoint: (https://qj4tudodmb.execute-api.us-east-1.amazonaws.com/BackgroundCheckFunction)
 Method: POST
 Content-Type: application/json
 
