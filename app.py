@@ -1,6 +1,4 @@
-from flask import Flask, request, jsonify
-
-app = Flask(__name__)
+import json
 
 def calculate_eligibility(data):
     """Function to evaluate if the user is eligible for donations."""
@@ -40,11 +38,11 @@ def calculate_eligibility(data):
     eligible = score <= 20
     return {"eligible": eligible, "score": score}
 
-@app.route("/api/background-check", methods=["POST"])
-def background_check():
-    """API endpoint for checking user eligibility."""
+def lambda_handler(event, context):
+    """AWS Lambda entry point for processing HTTP requests."""
     try:
-        data = request.get_json()
+        # Parse the incoming request body
+        body = json.loads(event.get("body", "{}"))
 
         # Validate required fields
         required_fields = [
@@ -52,26 +50,28 @@ def background_check():
             "employment_status", "housing_type", "gross_income_last_year", "reference"
         ]
 
-        missing_fields = [field for field in required_fields if field not in data]
+        missing_fields = [field for field in required_fields if field not in body]
         if missing_fields:
-            return jsonify({"error": f"Missing fields: {', '.join(missing_fields)}"}), 400
+            return {
+                "statusCode": 400,
+                "body": json.dumps({"error": f"Missing fields: {', '.join(missing_fields)}"})
+            }
 
         # Validate investment accounts
-        if "investment_accounts" in data and not isinstance(data["investment_accounts"], dict):
-            return jsonify({"error": "investment_accounts must be a dictionary with investment types and amounts"}), 400
+        if "investment_accounts" in body and not isinstance(body["investment_accounts"], dict):
+            return {
+                "statusCode": 400,
+                "body": json.dumps({"error": "investment_accounts must be a dictionary with investment types and amounts"})
+            }
 
         # Compute eligibility
-        result = calculate_eligibility(data)
-        return jsonify(result), 200
+        result = calculate_eligibility(body)
+        return {
+            "statusCode": 200,
+            "body": json.dumps(result)
+        }
 
-    except KeyError as e:
-        return jsonify({"error": f"Missing key: {str(e)}"}), 400
-    except ValueError as e:
-        return jsonify({"error": f"Invalid value: {str(e)}"}), 400
-    except TypeError as e:
-        return jsonify({"error": f"Type error: {str(e)}"}), 400
+    except json.JSONDecodeError:
+        return {"statusCode": 400, "body": json.dumps({"error": "Invalid JSON format"})}
     except Exception as e:
-        return jsonify({"error": "Internal server error"}), 500
-
-if __name__ == "__main__":
-    app.run(debug=True)
+        return {"statusCode": 500, "body": json.dumps({"error": f"Internal server error: {str(e)}"})}
